@@ -2,7 +2,7 @@ package pro.sky.telegrambot.services;
 
 import pro.sky.telegrambot.entities.NotificationTask;
 
-import java.util.Set;
+import java.util.List;
 
 public interface NotificationTaskService {
 
@@ -10,5 +10,5 @@ public interface NotificationTaskService {
 
     void checkActualTasks();
 
-    void sendActualTasks(Set<NotificationTask> notificationTasks);
+    void sendActualTasks(List<NotificationTask> notificationTasks);
 }

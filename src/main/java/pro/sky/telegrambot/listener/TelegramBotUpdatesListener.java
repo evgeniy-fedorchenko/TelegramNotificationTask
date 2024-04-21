@@ -44,13 +44,9 @@ public class TelegramBotUpdatesListener implements UpdatesListener {
         if (update == null || update.message() == null) {
             return;
         }
-
-        Long chatId = update.message().chat().id();
-        String inputMessageText = update.message().text();
-
-        SendMessage request = inputMessageText == null
-                ? service.reactNullText(chatId)
-                : service.reactNotNullText(chatId, inputMessageText);
+        SendMessage request = update.message().text() == null
+                ? service.reactNullText(update.message().chat().id())
+                : service.reactNotNullText(update.message());
 
         telegramBot.execute(request);
     }

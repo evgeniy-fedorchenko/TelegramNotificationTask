@@ -25,6 +25,9 @@ public class NotificationTask {
     @Future
     private LocalDateTime notificationDateTime;
 
+    @NotNull
+    private String username;
+
 
     public long getId() {
         return id;
@@ -58,6 +61,14 @@ public class NotificationTask {
         this.notificationDateTime = notificationDateTime;
     }
 
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
     @Override
     public boolean equals(Object otherNotificationTask) {
         if (this == otherNotificationTask) {
@@ -77,8 +88,8 @@ public class NotificationTask {
 
     @Override
     public String toString() {
-        return "NotifTask: {ID:%d, chatId:%d, notificationText:'%s', notificationTime:'%s'}".formatted(
-                id, chatId, notificationText.substring(0, 15), notificationDateTime
+        return "NotifTask: {ID:%d, chatId:%d, username='%s', notificationText:'%s', notificationTime:'%s'}".formatted(
+                id, chatId, username, notificationText.substring(0, 15), notificationDateTime
         );
     }
 }
