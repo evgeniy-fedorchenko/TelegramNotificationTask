@@ -8,6 +8,8 @@ import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import pro.sky.telegrambot.enums.AnswerMessage;
+import pro.sky.telegrambot.exceptions.InvalidInputMessageException;
 import pro.sky.telegrambot.services.GenerateAnswerService;
 
 import java.util.List;
@@ -44,10 +46,20 @@ public class TelegramBotUpdatesListener implements UpdatesListener {
         if (update == null || update.message() == null) {
             return;
         }
-        SendMessage request = update.message().text() == null
-                ? service.reactNullText(update.message().chat().id())
-                : service.reactNotNullText(update.message());
 
-        telegramBot.execute(request);
+        SendMessage sendMessage;
+        try {
+            sendMessage = update.message().text() == null
+                    ? service.reactNullText(update.message().chat().id())
+                    : service.reactNotNullText(update.message());
+
+        } catch (InvalidInputMessageException ex) {
+            logger.error(ex.getMessage(), ex);
+            sendMessage = new SendMessage(update.message().chat().id(), AnswerMessage.ANSWER_MESSAGE_TO_NOT_NULL_CORRECT_TEXT.getAnswer());
+        } catch (RuntimeException ex) {
+            logger.error("Unknown exception", ex);
+            sendMessage = new SendMessage(update.message().chat().id(), AnswerMessage.ANSWER_MESSAGE_UNKNOWN_EXCEPTION.getAnswer());
+        }
+        telegramBot.execute(sendMessage);
     }
 }

@@ -2,9 +2,11 @@ package pro.sky.telegrambot.services;
 
 import com.pengrad.telegrambot.model.Message;
 import com.pengrad.telegrambot.request.SendMessage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
-import pro.sky.telegrambot.entities.NotificationTask;
+import pro.sky.telegrambot.exceptions.InvalidInputMessageException;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -17,6 +19,8 @@ import static pro.sky.telegrambot.enums.AnswerMessage.*;
 @Service
 public class GenerateAnswerServiceImpl implements GenerateAnswerService {
 
+    Logger logger = LoggerFactory.getLogger(GenerateAnswerServiceImpl.class);
+
     private final NotificationTaskService notificationTaskService;
 
     public GenerateAnswerServiceImpl(NotificationTaskService notificationTaskService) {
@@ -25,11 +29,13 @@ public class GenerateAnswerServiceImpl implements GenerateAnswerService {
 
     @Override
     public SendMessage reactNullText(Long chatId) {
-        return new SendMessage(chatId, ANSWER_MESSAGE_TO_NULL_TEXT.getAnswer());
+        SendMessage sendMessage = new SendMessage(chatId, ANSWER_MESSAGE_TO_NULL_TEXT.getAnswer());
+        logger.info("Detected update without text from chat{chatId: {}}. Processed", chatId);
+        return sendMessage;
     }
 
     @Override
-    public SendMessage reactNotNullText(Message message) {
+    public SendMessage reactNotNullText(Message message) throws InvalidInputMessageException {
         Long chatId = message.chat().id();
         String inputMessageText = message.text();
 
@@ -38,22 +44,16 @@ public class GenerateAnswerServiceImpl implements GenerateAnswerService {
             return new SendMessage(chatId, commandOpt.get());
         }
 
-        Optional<Pair<LocalDateTime, String>> notificationDataOpt = purseNotificationData(inputMessageText);
-        if (notificationDataOpt.isEmpty()) {
-            return new SendMessage(chatId, ANSWER_MESSAGE_TO_NULL_INCORRECT_TEXT.getAnswer());
+        Pair<LocalDateTime, String> notificationData;
+        try {
+            notificationData = purseNotificationData(inputMessageText);
+        } catch (InvalidInputMessageException ex) {
+            logger.error(ex.getMessage());
+            return new SendMessage(chatId, ANSWER_MESSAGE_TO_NOT_NULL_INCORRECT_TEXT.getAnswer());
         }
 
-        new Thread(() -> {
-            NotificationTask newTask = new NotificationTask();
-            newTask.setChatId(chatId);
-            newTask.setNotificationText(notificationDataOpt.get().getSecond());
-            newTask.setNotificationDateTime(notificationDataOpt.get().getFirst());
-            newTask.setUsername(message.chat().username());
-            notificationTaskService.saveNewTask(newTask);
-        }).start();
-
+        notificationTaskService.saveNewTask(message, notificationData);
         return new SendMessage(chatId, ANSWER_MESSAGE_TO_NOT_NULL_CORRECT_TEXT.getAnswer());
-
     }
 
     private Optional<String> checkBotCommand(String inputMessageText) {
@@ -65,8 +65,7 @@ public class GenerateAnswerServiceImpl implements GenerateAnswerService {
         };
     }
 
-    private Optional<Pair<LocalDateTime, String>> purseNotificationData(String inputMessageText) {
-        // todo протестить паттерн
+    private Pair<LocalDateTime, String> purseNotificationData(String inputMessageText) throws InvalidInputMessageException {
         /* Regexp: 1ая группа - число - от 1го до 31 с возможным ведущим нулем у однозначных чисел; точка
                    2ая группа - месяц - от 1го  до 12 с возможным ведущим нулем у однозначных номером месяца; точка
                    3ая группа - год - две или четыре цифры, проверка на уже наступившую дату будет позже; пробел
@@ -80,12 +79,16 @@ public class GenerateAnswerServiceImpl implements GenerateAnswerService {
         Matcher matcher = pattern.matcher(inputMessageText);
 
         if (!matcher.matches()) {
-            return Optional.empty();
+            throw new InvalidInputMessageException("Input message is not matched of pattern. Input message: " + inputMessageText);
         }
-        String item = matcher.group(6);
-        String dateTime = matcher.group(1) + matcher.group(2) + matcher.group(3) + matcher.group(4) + matcher.group(5).substring(0, 1000);
-        LocalDateTime date = LocalDateTime.parse(dateTime, DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"));
+        String date = matcher.group(1) + "." + matcher.group(2) + "." + matcher.group(3);
+        String time = matcher.group(4) + ":" + matcher.group(5);
+        String item = matcher.group(6).length() > 1000 ? matcher.group(6).substring(0, 1000) : matcher.group(6);
 
-        return Optional.of(Pair.of(date, item));
+        LocalDateTime dateTime = LocalDateTime.parse(date + " " + time, DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"));
+        if (dateTime.isBefore(LocalDateTime.now())) {
+            throw new InvalidInputMessageException("DateTime of input message is before current dateTime. Input message: " + inputMessageText);
+        }
+        return Pair.of(dateTime, item);
     }
 }

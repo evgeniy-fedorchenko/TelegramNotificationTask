@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 import java.util.Objects;
 
 @Entity
-@Table(name = "notification-task")
+@Table(name = "notification_task")
 public class NotificationTask {
 
     @Id
@@ -89,7 +89,7 @@ public class NotificationTask {
     @Override
     public String toString() {
         return "NotifTask: {ID:%d, chatId:%d, username='%s', notificationText:'%s', notificationTime:'%s'}".formatted(
-                id, chatId, username, notificationText.substring(0, 15), notificationDateTime
+                id, chatId, username, notificationText, notificationDateTime
         );
     }
 }

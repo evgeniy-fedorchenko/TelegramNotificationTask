@@ -1,5 +1,16 @@
 package pro.sky.telegrambot.enums;
 
+/**
+ * Перечисление заготовленных ответов для пользователя. Ответы для команд (/start, /help и т.д.) тоже находятся тут<br>
+ * Полный список констант:<br>
+ * {@code ANSWER_MESSAGE_TO_NULL_TEXT} - если юзер не прислал текст<br>
+ * {@code ANSWER_MESSAGE_TO_NOT_NULL_INCORRECT_TEXT} - если текст не парсится<br>
+ * {@code ANSWER_MESSAGE_TO_NOT_NULL_CORRECT_TEXT} - ответ, что все таска успешно сохранена<br>
+ * {@code START_ANSWER_MESSAGE_FOR_ACTUAL_TASK} - ШАБЛОН для уведомления, требуется .formatted()<br>
+ * {@code ANSWER_MESSAGE_TO_START_COMMAND} - ответ на команду /start<br>
+ * {@code ANSWER_MESSAGE_TO_HELP_COMMAND} - ответ на команду /help<br>
+ * {@code ANSWER_MESSAGE_UNKNOWN_EXCEPTION} - ответ, если непредвиденная ошибка в т.ч. DatabaseException<br>
+ */
 public enum AnswerMessage {
 
     ANSWER_MESSAGE_TO_NULL_TEXT(
@@ -10,7 +21,7 @@ public enum AnswerMessage {
             "Cool, I'll send you a notification when it's time."
     ),
 
-    ANSWER_MESSAGE_TO_NULL_INCORRECT_TEXT(
+    ANSWER_MESSAGE_TO_NOT_NULL_INCORRECT_TEXT(
             """
                     I'm sorry, but you're talking too hard. Try using this format instead
                     (you can use any language you want):
@@ -23,9 +34,13 @@ public enum AnswerMessage {
                     """
     ),
 
+
+    /**
+     * Для метода .getAnswer() требуется {@code .formatted()} два аргумента: <b>%s</b> - username, <b>%s</b> - notificationText
+     * */
     START_ANSWER_MESSAGE_FOR_ACTUAL_TASK(
             """
-                    Hi, bro!
+                    Hi, %s!
                     A while back, you asked me to remind you
                     __________
                                         
@@ -65,6 +80,13 @@ public enum AnswerMessage {
                                         
                     If you have any questions or wishes, feel free to reach out to my developer. You can find him here -> @AzorAhai777
                     Good luck, bro
+                    """
+    ), ANSWER_MESSAGE_UNKNOWN_EXCEPTION(
+            """
+                    Sorry, man
+                    There seems to be some kind of mix-up, but I'm not sure what's going on here
+                    Can we try again?
+                    :(
                     """
     );
 
