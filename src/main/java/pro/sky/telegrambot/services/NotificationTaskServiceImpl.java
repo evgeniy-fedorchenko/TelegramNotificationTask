@@ -34,8 +34,15 @@ public class NotificationTaskServiceImpl implements NotificationTaskService {
         this.repository = repository;
     }
 
+    /**
+     * Метод конструирует объект {@link NotificationTask} и сохраняет его в БД
+     * @param message Объект, для получения значений полей <b>chatId</b> и <b>username</b>
+     * @param notificationData Объект для получения значений полей <b>notificationText</b> и <b>notificationDateTime</b>
+     * @throws DatabaseException Если полученый объект нарушает констрейнты БД, но такого не должно роизойти,
+     * т.к. валидация на входе должна все отловить
+     */
     @Override
-    public void saveNewTask(Message message, Pair<LocalDateTime, String> notificationData) {
+    public void saveNewTask(Message message, Pair<LocalDateTime, String> notificationData) throws DatabaseException {
         NotificationTask newTask = new NotificationTask();
 
         newTask.setChatId(message.chat().id());
@@ -69,7 +76,6 @@ public class NotificationTaskServiceImpl implements NotificationTaskService {
      * Метод для отправки уведомлений своим пользователям. Отправленные уведомления удаляются из базы
      * Если увемление не было отправлено - оно остается  в базе
      * Но если в течении 30 минут не получилось его отправить (это 30 попыток отправки) - оно удаляется из базы
-     *
      * @param actualTasks Список уведомлений, которые необходимо отправить сейчас
      */
     @Override

@@ -6,21 +6,29 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
+import pro.sky.telegrambot.entities.NotificationTask;
+import pro.sky.telegrambot.exceptions.DatabaseException;
 import pro.sky.telegrambot.exceptions.InvalidInputMessageException;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Optional;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static pro.sky.telegrambot.enums.AnswerMessage.*;
+import static pro.sky.telegrambot.enums.BotCommand.help;
+import static pro.sky.telegrambot.enums.BotCommand.start;
 
 @Service
 public class GenerateAnswerServiceImpl implements GenerateAnswerService {
 
-    Logger logger = LoggerFactory.getLogger(GenerateAnswerServiceImpl.class);
-
+    private final Logger logger = LoggerFactory.getLogger(GenerateAnswerServiceImpl.class);
+    private final Map<String, String> botCommand = new HashMap<>(Map.of(
+            start.getCommandName(), ANSWER_MESSAGE_TO_START_COMMAND.getAnswer(),
+            help.getCommandName(), ANSWER_MESSAGE_TO_HELP_COMMAND.getAnswer()
+    ));
     private final NotificationTaskService notificationTaskService;
 
     public GenerateAnswerServiceImpl(NotificationTaskService notificationTaskService) {
@@ -34,15 +42,27 @@ public class GenerateAnswerServiceImpl implements GenerateAnswerService {
         return sendMessage;
     }
 
+
+    /**
+     * @param message Корректный объект {@link Message}. Объект проверяется на соответвие командам бота и возвращается
+     *                ответ на команду. В противном случае парсится на объект {@link NotificationTask} и сохраняется в БД.
+     *                Если не получается спарсить - возвращаем {@link SendMessage} со стандартным ответом
+     * @return {@link SendMessage} Ответное сообщение для юзера на его chatId
+     * @throws DatabaseException если сообщение споткнулось об констрейнты базы данных, но такого не должно
+     *                           произойти, т.к. валидация на входе должна все отловить
+     */
     @Override
-    public SendMessage reactNotNullText(Message message) throws InvalidInputMessageException {
+    public SendMessage reactNotNullText(Message message) throws DatabaseException {
         Long chatId = message.chat().id();
         String inputMessageText = message.text();
 
-        Optional<String> commandOpt = checkBotCommand(inputMessageText);
-        if (commandOpt.isPresent()) {
-            return new SendMessage(chatId, commandOpt.get());
+        if (botCommand.containsKey(inputMessageText)) {
+            return new SendMessage(chatId, botCommand.get(inputMessageText));
         }
+//        Optional<String> commandOpt = checkBotCommand(inputMessageText);
+//        if (commandOpt.isPresent()) {
+//            return new SendMessage(chatId, commandOpt.get());
+//        }
 
         Pair<LocalDateTime, String> notificationData;
         try {
@@ -52,18 +72,19 @@ public class GenerateAnswerServiceImpl implements GenerateAnswerService {
             return new SendMessage(chatId, ANSWER_MESSAGE_TO_NOT_NULL_INCORRECT_TEXT.getAnswer());
         }
 
-        notificationTaskService.saveNewTask(message, notificationData);
+        new Thread(() -> notificationTaskService.saveNewTask(message, notificationData));
         return new SendMessage(chatId, ANSWER_MESSAGE_TO_NOT_NULL_CORRECT_TEXT.getAnswer());
     }
 
-    private Optional<String> checkBotCommand(String inputMessageText) {
-        return switch (inputMessageText) {
-            // todo сделать Enum из команд
-            case "/start" -> Optional.of(ANSWER_MESSAGE_TO_START_COMMAND.getAnswer());
-            case "/help" -> Optional.of(ANSWER_MESSAGE_TO_HELP_COMMAND.getAnswer());
-            default -> Optional.empty();
-        };
-    }
+//    private Optional<String> checkBotCommand(String inputMessageText) {
+//        return switch (inputMessageText) {
+//            // todo сделать Enum из команд
+//            case "/start" -> Optional.of(ANSWER_MESSAGE_TO_START_COMMAND.getAnswer());
+//            case "/help" -> Optional.of(ANSWER_MESSAGE_TO_HELP_COMMAND.getAnswer());
+//            default -> Optional.empty();
+//        };
+//    }
+
 
     private Pair<LocalDateTime, String> purseNotificationData(String inputMessageText) throws InvalidInputMessageException {
         /* Regexp: 1ая группа - число - от 1го до 31 с возможным ведущим нулем у однозначных чисел; точка

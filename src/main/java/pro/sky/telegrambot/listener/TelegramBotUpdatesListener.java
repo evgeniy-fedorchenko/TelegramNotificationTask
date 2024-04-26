@@ -21,11 +21,11 @@ public class TelegramBotUpdatesListener implements UpdatesListener {
     private final Logger logger = LoggerFactory.getLogger(TelegramBotUpdatesListener.class);
 
     private final TelegramBot telegramBot;
-    private final GenerateAnswerService service;
+    private final GenerateAnswerService answerService;
 
-    public TelegramBotUpdatesListener(TelegramBot telegramBot, GenerateAnswerService service) {
+    public TelegramBotUpdatesListener(TelegramBot telegramBot, GenerateAnswerService answerService) {
         this.telegramBot = telegramBot;
-        this.service = service;
+        this.answerService = answerService;
     }
 
     @PostConstruct
@@ -56,9 +56,10 @@ public class TelegramBotUpdatesListener implements UpdatesListener {
 
         SendMessage sendMessage;
         try {
+
             sendMessage = update.message().text() == null
-                    ? service.reactNullText(update.message().chat().id())
-                    : service.reactNotNullText(update.message());
+                    ? answerService.reactNullText(update.message().chat().id())
+                    : answerService.reactNotNullText(update.message());
 
         } catch (InvalidInputMessageException ex) {
             logger.error(ex.getMessage(), ex);
