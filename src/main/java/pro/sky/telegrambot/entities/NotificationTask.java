@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 import java.util.Objects;
 
 @Entity
-@Table(name = "notification-task")
+@Table(name = "notification_task")
 public class NotificationTask {
 
     @Id
@@ -24,6 +24,9 @@ public class NotificationTask {
 
     @Future
     private LocalDateTime notificationDateTime;
+
+    @NotNull
+    private String username;
 
 
     public long getId() {
@@ -58,6 +61,14 @@ public class NotificationTask {
         this.notificationDateTime = notificationDateTime;
     }
 
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
     @Override
     public boolean equals(Object otherNotificationTask) {
         if (this == otherNotificationTask) {
@@ -77,8 +88,8 @@ public class NotificationTask {
 
     @Override
     public String toString() {
-        return "NotifTask: {ID:%d, chatId:%d, notificationText:'%s', notificationTime:'%s'}".formatted(
-                id, chatId, notificationText.substring(0, 15), notificationDateTime
+        return "NotifTask: {ID:%d, chatId:%d, username='%s', notificationText:'%s', notificationTime:'%s'}".formatted(
+                id, chatId, username, notificationText, notificationDateTime
         );
     }
 }

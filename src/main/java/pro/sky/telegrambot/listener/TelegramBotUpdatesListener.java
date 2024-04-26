@@ -5,9 +5,12 @@ import com.pengrad.telegrambot.UpdatesListener;
 import com.pengrad.telegrambot.model.Update;
 import com.pengrad.telegrambot.request.SendMessage;
 import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import pro.sky.telegrambot.enums.AnswerMessage;
+import pro.sky.telegrambot.exceptions.InvalidInputMessageException;
 import pro.sky.telegrambot.services.GenerateAnswerService;
 
 import java.util.List;
@@ -18,16 +21,22 @@ public class TelegramBotUpdatesListener implements UpdatesListener {
     private final Logger logger = LoggerFactory.getLogger(TelegramBotUpdatesListener.class);
 
     private final TelegramBot telegramBot;
-    private final GenerateAnswerService service;
+    private final GenerateAnswerService answerService;
 
-    public TelegramBotUpdatesListener(TelegramBot telegramBot, GenerateAnswerService service) {
+    public TelegramBotUpdatesListener(TelegramBot telegramBot, GenerateAnswerService answerService) {
         this.telegramBot = telegramBot;
-        this.service = service;
+        this.answerService = answerService;
     }
 
     @PostConstruct
     public void init() {
         telegramBot.setUpdatesListener(this);
+        logger.debug("Setup listener. Application stand up");
+    }
+
+    @PreDestroy
+    public void destroy() {
+        logger.debug("Application is now destroyed");
     }
 
     @Override
@@ -45,13 +54,20 @@ public class TelegramBotUpdatesListener implements UpdatesListener {
             return;
         }
 
-        Long chatId = update.message().chat().id();
-        String inputMessageText = update.message().text();
+        SendMessage sendMessage;
+        try {
 
-        SendMessage request = inputMessageText == null
-                ? service.reactNullText(chatId)
-                : service.reactNotNullText(chatId, inputMessageText);
+            sendMessage = update.message().text() == null
+                    ? answerService.reactNullText(update.message().chat().id())
+                    : answerService.reactNotNullText(update.message());
 
-        telegramBot.execute(request);
+        } catch (InvalidInputMessageException ex) {
+            logger.error(ex.getMessage(), ex);
+            sendMessage = new SendMessage(update.message().chat().id(), AnswerMessage.ANSWER_MESSAGE_TO_NOT_NULL_CORRECT_TEXT.getAnswer());
+        } catch (RuntimeException ex) {
+            logger.error("Unknown exception", ex);
+            sendMessage = new SendMessage(update.message().chat().id(), AnswerMessage.ANSWER_MESSAGE_UNKNOWN_EXCEPTION.getAnswer());
+        }
+        telegramBot.execute(sendMessage);
     }
 }
